@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elegance: Draped Pearl Garlands</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Times+New+Roman&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --c-bg: #050505; 
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--c-bg);
+            font-family: 'Times New Roman', serif;
+            color: #fff;
+        }
+
+        /* --- UI Overlay --- */
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            transition: opacity 0.5s ease;
+        }
+
+        .ui-hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+        }
+
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 56px;
+            text-align: center;
+            margin-top: 40px;
+            background: linear-gradient(to bottom, #eeeeee, #777777);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+            letter-spacing: 6px;
+        }
+
+        /* --- Upload Controls --- */
+        .upload-wrapper {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            pointer-events: auto;
+        }
+
+        .btn-upload {
+            background: rgba(30, 30, 30, 0.5);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(200, 200, 200, 0.3);
+            color: #ddd;
+            padding: 12px 30px;
+            font-family: 'Cinzel', serif;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .btn-upload:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: #fff;
+            color: #fff;
+        }
+
+        .hint-text {
+            display: block;
+            margin-top: 10px;
+            font-size: 10px;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 1px;
+        }
+
+        /* --- Loader --- */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid #fff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader-text {
+            font-family: 'Cinzel', serif;
+            color: #888;
+            letter-spacing: 3px;
+            font-size: 12px;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- Webcam Hidden --- */
+        #webcam-container {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            opacity: 0; 
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+
+    <!-- Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "@mediapipe/tasks-vision": "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/+esm"
+        }
+    }
+    </script>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">HANGING PEARL NECKLACES</div>
+    </div>
+
+    <!-- UI Overlay -->
+    <div id="ui-container">
+        <h1>Winter Wish</h1>
+        
+        <div class="upload-wrapper">
+            <button class="btn-upload" onclick="document.getElementById('file-input').click()">ADD MEMORY</button>
+            <input type="file" id="file-input" accept="image/*" style="display: none;">
+            <span class="hint-text">FIST to Shrink / OPEN to Scatter</span>
+        </div>
+    </div>
+
+    <!-- Hidden Webcam for CV -->
+    <div id="webcam-container">
+        <video id="webcam" autoplay playsinline></video>
+        <canvas id="cv-canvas" width="160" height="120"></canvas>
+    </div>
+
+    <!-- Main Application Logic -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
+
+        // --- Global State ---
+        const STATE = {
+            mode: 'TREE', 
+            targetPhotoIndex: -1,
+            handRotation: { x: 0, y: 0 },
+            isLoaded: false
+        };
+
+        const SETTINGS = {
+            diamondCount: 5000, 
+            dustCount: 1000,     
+            treeHeight: 38,      
+            maxRadius: 15,
+            
+            // 珍珠设置
+            pearlLayers: 12,      // 多少层
+            strandsPerLayer: 3,   // 每层多少条
+            pearlsPerStrand: 32   // 每条多少颗 (形成连线)
+        };
+
+        // --- Main App Class ---
+        class ChristmasApp {
+            constructor() {
+                this.container = document.body;
+                this.particles = [];
+                this.dustParticles = [];
+                this.photos = [];
+                this.clock = new THREE.Clock();
+                
+                this.init();
+            }
+
+            async init() {
+                // 1. Scene Setup
+                this.createScene();
+                this.setupPostProcessing();
+                
+                // 2. Content Generation
+                await this.createResources();
+                this.createParticles();
+                this.createDust();
+                this.createDefaultPhoto();
+
+                // 3. Event Listeners
+                this.setupInputs();
+                window.addEventListener('resize', () => this.onWindowResize(), false);
+
+                // 4. CV Setup
+                await this.setupComputerVision();
+
+                // 5. Start Loop
+                STATE.isLoaded = true;
+                const loader = document.getElementById('loader');
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 1000);
+
+                this.animate();
+            }
+
+            createScene() {
+                this.renderer = new THREE.WebGLRenderer({ antialias: false });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.0; 
+                this.container.appendChild(this.renderer.domElement);
+
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.camera.position.set(0, 2, 60);
+
+                this.scene = new THREE.Scene();
+
+                const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
+                this.scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.15);
+                this.scene.add(ambientLight);
+
+                const mainLight = new THREE.DirectionalLight(0xffffff, 2.0);
+                mainLight.position.set(10, 50, 10);
+                this.scene.add(mainLight);
+
+                const rimLight = new THREE.SpotLight(0xcceeff, 800);
+                rimLight.position.set(-30, 20, -30);
+                rimLight.lookAt(0,0,0);
+                this.scene.add(rimLight);
+
+                this.mainGroup = new THREE.Group();
+                this.scene.add(this.mainGroup);
+            }
+
+            setupPostProcessing() {
+                this.composer = new EffectComposer(this.renderer);
+                const renderPass = new RenderPass(this.scene, this.camera);
+                this.composer.addPass(renderPass);
+
+                const bloomPass = new UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    0.35, 
+                    0.2,  
+                    0.85 
+                );
+                this.composer.addPass(bloomPass);
+            }
+
+            async createResources() {
+                // 碎钻
+                this.matDiamond = new THREE.MeshPhysicalMaterial({ 
+                    color: 0xffffff, 
+                    metalness: 1.0, 
+                    roughness: 0.1, 
+                    clearcoat: 1.0,
+                    clearcoatRoughness: 0.05,
+                    emissive: 0x000000
+                });
+
+                // 宝石
+                this.matGem = new THREE.MeshPhysicalMaterial({ 
+                    color: 0xeeeeff, 
+                    metalness: 0.9,
+                    roughness: 0.0,
+                    transmission: 0.5,
+                    thickness: 1.5,
+                    emissive: 0x223355, 
+                    emissiveIntensity: 0.2
+                });
+
+                // 珍珠
+                this.matPearl = new THREE.MeshStandardMaterial({ 
+                    color: 0xffffff, 
+                    roughness: 0.25, 
+                    metalness: 0.1,
+                    emissive: 0x111111 
+                });
+
+                // 顶部星星
+                this.matStar = new THREE.MeshBasicMaterial({ 
+                    color: 0xffffff 
+                });
+            }
+
+            createParticles() {
+                // --- 几何体 ---
+                const diamondGeo = new THREE.OctahedronGeometry(0.3, 0); 
+                const gemGeo = new THREE.TetrahedronGeometry(0.45, 0);   
+                const pearlGeo = new THREE.SphereGeometry(0.15, 8, 8); 
+
+                const starShape = new THREE.Shape();
+                const outerR = 0.8, innerR = 0.25; 
+                for (let i = 0; i < 12; i++) {
+                    const r = i % 2 === 0 ? outerR : innerR;
+                    const a = (i / 6) * Math.PI;
+                    if (i===0) starShape.moveTo(Math.cos(a)*r, Math.sin(a)*r);
+                    else starShape.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+                }
+                const starGeo = new THREE.ExtrudeGeometry(starShape, { depth: 0.1, bevelEnabled: false });
+                starGeo.center();
+
+
+                // --- A. 生成树体 (碎钻堆积) ---
+                
+                for (let i = 0; i < SETTINGS.diamondCount; i++) {
+                    const isGem = Math.random() < 0.08; 
+                    const mesh = new THREE.Mesh(
+                        isGem ? gemGeo : diamondGeo, 
+                        isGem ? this.matGem : this.matDiamond
+                    );
+                    
+                    const t = Math.random(); 
+                    const y = (t - 0.5) * SETTINGS.treeHeight;
+                    const maxR = SETTINGS.maxRadius * (1 - t);
+                    
+                    const r = maxR * Math.sqrt(Math.random());
+                    const angle = Math.random() * Math.PI * 2;
+
+                    const pos = new THREE.Vector3(
+                        Math.cos(angle) * r,
+                        y,
+                        Math.sin(angle) * r
+                    );
+
+                    mesh.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+                    
+                    const s = isGem ? (0.8 + Math.random() * 0.5) : (0.4 + Math.random() * 0.6);
+                    mesh.scale.setScalar(s);
+
+                    this.initParticle(mesh, pos, isGem ? 'GEM' : 'DIAMOND');
+                }
+
+                // --- B. 生成分层错落的珍珠项链 (Layered Pearl Garlands) ---
+                
+                const layers = SETTINGS.pearlLayers;
+                const strandsPerLayer = SETTINGS.strandsPerLayer;
+                const pearlsPerStrand = SETTINGS.pearlsPerStrand;
+
+                // 遍历每一层
+                for (let l = 0; l < layers; l++) {
+                    // tLayer: 0 (底) -> 1 (顶)
+                    // 但我们要稍微控制范围，不要太靠顶或太靠底
+                    const tLayer = 0.05 + (l / layers) * 0.9; 
+                    
+                    const layerYBase = (tLayer - 0.5) * SETTINGS.treeHeight;
+                    const layerRadius = SETTINGS.maxRadius * (1 - tLayer) + 0.8; // 浮在表面
+
+                    // 错位角度：偶数层不偏移，奇数层偏移 60度 (PI/3)
+                    const layerOffset = (l % 2) * (Math.PI / 3);
+
+                    // 遍历该层的 3 条项链
+                    for (let s = 0; s < strandsPerLayer; s++) {
+                        // 每一条占据 120度 (2PI / 3)
+                        const startAngle = layerOffset + (s / strandsPerLayer) * Math.PI * 2;
+                        const endAngle = startAngle + (Math.PI * 2 / strandsPerLayer);
+
+                        // 生成这一条项链上的珍珠
+                        for (let p = 0; p <= pearlsPerStrand; p++) {
+                            const mesh = new THREE.Mesh(pearlGeo, this.matPearl);
+                            
+                            // t: 0 -> 1 (链子两端)
+                            const t = p / pearlsPerStrand;
+
+                            // 线性插值角度
+                            const currentAngle = startAngle + (endAngle - startAngle) * t;
+
+                            // 悬垂物理模拟 (Catenary / Sine)
+                            // 两头高，中间低
+                            const dropAmount = 1.5 + (1 - tLayer); // 底部垂得更深，顶部垂得浅
+                            const yDrop = Math.sin(t * Math.PI) * dropAmount;
+                            
+                            const pos = new THREE.Vector3(
+                                Math.cos(currentAngle) * layerRadius,
+                                layerYBase - yDrop, // 减去下垂量
+                                Math.sin(currentAngle) * layerRadius
+                            );
+
+                            // 珍珠紧密排列，大小微调
+                            mesh.scale.setScalar(0.9 + Math.random() * 0.2);
+
+                            this.initParticle(mesh, pos, 'PEARL');
+                        }
+                    }
+                }
+
+                // --- C. 顶部大星星 ---
+                const topStar = new THREE.Mesh(starGeo, this.matStar);
+                const topPos = new THREE.Vector3(0, SETTINGS.treeHeight / 2 + 1.2, 0);
+                topStar.scale.setScalar(2.5);
+                this.initParticle(topStar, topPos, 'TOP_STAR');
+            }
+
+            initParticle(mesh, pos, type) {
+                let scatterDest;
+                
+                if (type === 'TOP_STAR') {
+                    scatterDest = pos.clone(); 
+                } else if (type === 'PEARL') {
+                    // 珍珠炸开时，整体向外扩大，保持环状散开
+                    scatterDest = new THREE.Vector3(pos.x * 2.0, pos.y, pos.z * 2.0);
+                } else {
+                    scatterDest = this.calculateScatterPosition();
+                }
+
+                mesh.userData = {
+                    type: type,
+                    treePos: pos.clone(), 
+                    scatterPos: scatterDest, 
+                    rotationSpeed: new THREE.Vector3(Math.random()*0.02, Math.random()*0.02, 0),
+                    baseScale: mesh.scale.x 
+                };
+
+                mesh.position.copy(pos);
+                this.mainGroup.add(mesh);
+                this.particles.push(mesh);
+            }
+
+            createDust() {
+                const geo = new THREE.BufferGeometry();
+                const pos = [];
+                for(let i=0; i<SETTINGS.dustCount; i++) {
+                    const p = this.calculateScatterPosition();
+                    pos.push(p.x, p.y, p.z);
+                }
+                geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+                const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.3 });
+                const dust = new THREE.Points(geo, mat);
+                this.mainGroup.add(dust);
+                this.dustParticles = dust; 
+            }
+
+            createDefaultPhoto() {
+                const canvas = document.createElement('canvas');
+                canvas.width = 512; canvas.height = 512;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff'; ctx.fillRect(0,0,512,512);
+                ctx.font = 'bold 60px Cinzel';
+                ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillText('MAKE A', 256, 200);
+                ctx.fillText('WISH', 256, 280);
+                
+                const texture = new THREE.CanvasTexture(canvas);
+                texture.colorSpace = THREE.SRGBColorSpace;
+                this.addPhotoToScene(texture);
+            }
+
+            addPhotoToScene(texture) {
+                const frameGeo = new THREE.BoxGeometry(5, 5, 0.2);
+                const frameMesh = new THREE.Mesh(frameGeo, this.matDiamond); 
+                const photoGeo = new THREE.PlaneGeometry(4.8, 4.8);
+                const photoMat = new THREE.MeshBasicMaterial({ map: texture });
+                const photoMesh = new THREE.Mesh(photoGeo, photoMat);
+                photoMesh.position.z = 0.11;
+                frameMesh.add(photoMesh);
+
+                const index = this.particles.length;
+                frameMesh.userData = {
+                    id: index,
+                    type: 'PHOTO',
+                    velocity: new THREE.Vector3(0,0,0),
+                    rotationSpeed: new THREE.Vector3(0.005, 0.005, 0),
+                    treePos: new THREE.Vector3(0, 0, SETTINGS.maxRadius + 4), 
+                    scatterPos: this.calculateScatterPosition(),
+                    baseScale: 1.0
+                };
+                
+                this.mainGroup.add(frameMesh);
+                this.particles.push(frameMesh);
+                this.photos.push(frameMesh);
+            }
+
+            calculateScatterPosition() {
+                const r = 10 + Math.random() * 20; 
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                return new THREE.Vector3(
+                    r * Math.sin(phi) * Math.cos(theta),
+                    r * Math.sin(phi) * Math.sin(theta),
+                    r * Math.cos(phi)
+                );
+            }
+
+            setupInputs() {
+                window.addEventListener('keydown', (e) => {
+                    if (e.key.toLowerCase() === 'h') {
+                        document.getElementById('ui-container').classList.toggle('ui-hidden');
+                    }
+                });
+                
+                this.renderer.domElement.addEventListener('touchstart', (e) => {
+                    if (!e.target.closest('.upload-wrapper')) {
+                        const ui = document.getElementById('ui-container');
+                        if (!ui.classList.contains('ui-hidden')) ui.classList.add('ui-hidden');
+                        else ui.classList.remove('ui-hidden');
+                    }
+                }, { passive: true });
+
+                const fileInput = document.getElementById('file-input');
+                fileInput.addEventListener('change', (e) => {
+                    const f = e.target.files[0];
+                    if (!f) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        new THREE.TextureLoader().load(ev.target.result, (t) => {
+                            t.colorSpace = THREE.SRGBColorSpace; 
+                            this.addPhotoToScene(t);
+                        });
+                    }
+                    reader.readAsDataURL(f);
+                });
+            }
+
+            async setupComputerVision() {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+                this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+                        delegate: "GPU"
+                    },
+                    runningMode: "VIDEO",
+                    numHands: 1
+                });
+
+                const video = document.getElementById("webcam");
+                
+                const constraints = {
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    }
+                };
+
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                        video.srcObject = stream;
+                        await new Promise(r => video.onloadeddata = r);
+                        this.video = video;
+                        this.startPredictionLoop();
+                    } catch (err) { console.error(err); }
+                }
+            }
+
+            startPredictionLoop() {
+                const loop = async () => {
+                    if (this.video && this.video.currentTime > 0) {
+                        const results = this.handLandmarker.detectForVideo(this.video, performance.now());
+                        this.processGestures(results);
+                    }
+                    requestAnimationFrame(loop);
+                };
+                loop();
+            }
+
+            processGestures(results) {
+                if (results.landmarks && results.landmarks.length > 0) {
+                    const lm = results.landmarks[0];
+                    
+                    const palmX = lm[9].x; 
+                    const palmY = lm[9].y;
+                    STATE.handRotation.y = (0.5 - palmX) * 2; 
+                    STATE.handRotation.x = (palmY - 0.5) * 1; 
+
+                    const wrist = lm[0];
+                    const middleMCP = lm[9]; 
+                    const thumbTip = lm[4];
+                    const indexTip = lm[8];
+                    const fingers = [lm[12], lm[16], lm[20]]; 
+
+                    const palmSize = Math.hypot(middleMCP.x - wrist.x, middleMCP.y - wrist.y);
+                    let avgTipDist = 0;
+                    fingers.forEach(t => { avgTipDist += Math.hypot(t.x - wrist.x, t.y - wrist.y); });
+                    avgTipDist /= 3;
+
+                    const extensionRatio = avgTipDist / (palmSize || 0.01);
+                    const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+                    const pinchRatio = pinchDist / (palmSize || 0.01);
+
+                    if (extensionRatio < 1.3) {
+                        STATE.mode = 'TREE';
+                        STATE.targetPhotoIndex = -1;
+                    } 
+                    else if (extensionRatio > 1.7) {
+                        STATE.mode = 'SCATTER';
+                        STATE.targetPhotoIndex = -1;
+                    } 
+                    else if (pinchRatio < 0.3) {
+                        STATE.mode = 'FOCUS';
+                        if (STATE.targetPhotoIndex === -1 && this.photos.length > 0) {
+                            const r = Math.floor(Math.random() * this.photos.length);
+                            STATE.targetPhotoIndex = this.photos[r].userData.id;
+                        }
+                    }
+                }
+            }
+
+            // --- Animation Loop ---
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                const time = this.clock.getElapsedTime();
+
+                this.mainGroup.rotation.y = THREE.MathUtils.lerp(this.mainGroup.rotation.y, STATE.handRotation.y + time * 0.05, 0.1); 
+                this.mainGroup.rotation.x = THREE.MathUtils.lerp(this.mainGroup.rotation.x, STATE.handRotation.x, 0.1);
+
+                this.particles.forEach(p => {
+                    let target = new THREE.Vector3();
+                    let scaleTarget = p.userData.baseScale; 
+
+                    if (STATE.mode === 'TREE') {
+                        target.copy(p.userData.treePos);
+
+                        if (p.userData.type === 'DIAMOND') {
+                            p.rotation.x += 0.005; 
+                            p.rotation.y += 0.005;
+                        }
+                        
+                        if (p.userData.type === 'GEM') {
+                            const pulse = Math.sin(time * 3 + p.userData.id) * 0.1 + 1;
+                            scaleTarget *= pulse;
+                        }
+
+                        if (p.userData.type === 'TOP_STAR') {
+                            p.rotation.y += 0.01;
+                            p.rotation.z = Math.sin(time) * 0.1;
+                        }
+
+                    } else if (STATE.mode === 'SCATTER') {
+                         target.copy(p.userData.scatterPos);
+                         p.rotation.x += p.userData.rotationSpeed.x;
+                         p.rotation.y += p.userData.rotationSpeed.y;
+                    } else if (STATE.mode === 'FOCUS') {
+                         if (p.userData.id === STATE.targetPhotoIndex) {
+                            target.set(0, 2, 35);
+                            scaleTarget = 4.5;
+                            p.rotation.set(0, 0, 0); 
+                         } else {
+                            target.copy(p.userData.scatterPos).multiplyScalar(1.5);
+                         }
+                    }
+
+                    p.position.lerp(target, 0.1);
+                    const s = THREE.MathUtils.lerp(p.scale.x, scaleTarget, 0.1);
+                    p.scale.set(s, s, s);
+                });
+
+                if(this.dustParticles) this.dustParticles.rotation.y = time * 0.05;
+
+                this.composer.render();
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.composer.setSize(window.innerWidth, window.innerHeight);
+            }
+        }
+
+        new ChristmasApp();
+
+    </script>
+</body>
+</html>
