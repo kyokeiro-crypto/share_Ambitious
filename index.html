@@ -24,6 +24,60 @@
             user-select: none;
         }
 
+        /* --- START OVERLAY (Cover Screen) --- */
+        #start-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1s ease, visibility 1s ease;
+        }
+
+        #start-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .start-btn {
+            background: transparent;
+            border: 2px solid #ffd700;
+            color: #ffd700;
+            padding: 15px 40px;
+            font-family: 'Cinzel', serif;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-btn:hover {
+            background: rgba(255, 215, 0, 0.1);
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+            transform: scale(1.05);
+        }
+
+        .start-hint {
+            margin-top: 20px;
+            font-size: 10px;
+            color: #666;
+            letter-spacing: 2px;
+            font-family: sans-serif;
+        }
+
+        /* --- UI Overlay --- */
         #ui-container {
             position: absolute;
             top: 0;
@@ -36,7 +90,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
-            padding-top: 5vh; /* 顶部留白 */
+            padding-top: 5vh; 
         }
 
         /* --- MODULE 1: Company Name --- */
@@ -48,6 +102,11 @@
             gap: 15px; 
             margin-bottom: 5px; 
             opacity: 0; 
+            /* Animation starts only when .active is added */
+        }
+        
+        /* Only animate when UI is active (after click) */
+        #ui-container.active .company-container {
             animation: fadeInSimple 3s ease forwards;
             animation-delay: 1.5s; 
         }
@@ -55,7 +114,7 @@
         .company-jp {
             font-family: 'Noto Serif JP', serif;
             font-weight: 900;
-            font-size: clamp(18px, 3.0vw, 24px); 
+            font-size: clamp(10px, 1.5vw, 18px); 
             background: linear-gradient(to bottom, #ffd700, #bf953f, #fbf5b7, #aa771c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -67,7 +126,7 @@
         .company-en {
             font-family: 'Cinzel', serif;
             font-weight: 900;
-            font-size: clamp(18px, 3.0vw, 24px); 
+            font-size: clamp(12px, 2.0vw, 24px); 
             background: linear-gradient(to bottom, #ffd700, #bf953f, #fbf5b7, #aa771c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -91,14 +150,14 @@
             transition: opacity 2.5s ease;
         }
 
-        /* --- MUSIC BUTTON STYLE --- */
+        /* Music Button (Bottom Right) */
         #music-btn {
             position: absolute;
             bottom: 30px;
             right: 30px;
             z-index: 100;
             background: rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 215, 0, 0.3); /* Gold border */
+            border: 1px solid rgba(255, 215, 0, 0.3);
             color: rgba(255, 215, 0, 0.8);
             font-family: 'Cinzel', serif;
             font-size: 12px;
@@ -110,14 +169,11 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             backdrop-filter: blur(4px);
+            opacity: 0; /* Hidden initially */
+            transition: opacity 1s;
         }
-
-        #music-btn:hover {
-            background: rgba(255, 215, 0, 0.1);
-            border-color: rgba(255, 215, 0, 0.8);
-            color: #fff;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
-        }
+        
+        #music-btn.visible { opacity: 1; }
 
         .visible { opacity: 1 !important; }
 
@@ -130,7 +186,7 @@
             width: 100%;
             height: 100%;
             background: #000;
-            z-index: 9999;
+            z-index: 9998; /* Below overlay */
             display: flex;
             justify-content: center;
             align-items: center;
@@ -159,10 +215,16 @@
 
     <div id="loader"><div class="spinner"></div></div>
 
+    <!-- START SCREEN OVERLAY -->
+    <div id="start-overlay">
+        <button id="start-btn" class="start-btn">Click to Open Gift</button>
+        <div class="start-hint">Turn on your sound</div>
+    </div>
+
     <!-- AUDIO ELEMENT -->
-    <!-- You can replace the src with any MP3 link -->
     <audio id="bg-music" loop>
-        <source src="cozy-christmas-waltz-449734.mp3" type="audio/mpeg">
+        <!-- Replace with your MP3 URL -->
+        <source src="christmas-background-music-436117.mp3" type="audio/mpeg">
     </audio>
 
     <div id="ui-container">
@@ -177,7 +239,7 @@
     </div>
 
     <!-- Music Control Button -->
-    <button id="music-btn">♪ Play Music</button>
+    <button id="music-btn">♪ Music On</button>
 
     <script type="module">
         import * as THREE from 'three';
@@ -208,6 +270,7 @@
                 this.snowMeshes = []; 
                 this.clock = new THREE.Clock();
                 this.trailParticles = []; 
+                this.isStarted = false; // Animation Flag
                 this.init();
             }
 
@@ -223,10 +286,11 @@
                 this.createSnow();        
                 this.createDetailedSnow(); 
                 
-                this.setupAudio(); // Initialize Audio
+                this.setupInteraction(); // Handle Start Click
 
                 window.addEventListener('resize', () => this.onWindowResize(), false);
                 
+                // Hide loading spinner, show Start Overlay
                 const loader = document.getElementById('loader');
                 loader.style.opacity = '0';
                 setTimeout(() => loader.remove(), 1000);
@@ -234,45 +298,43 @@
                 this.animate();
             }
 
-            // --- AUDIO SETUP ---
-            setupAudio() {
+            setupInteraction() {
+                const overlay = document.getElementById('start-overlay');
+                const startBtn = document.getElementById('start-btn');
                 const music = document.getElementById('bg-music');
-                const btn = document.getElementById('music-btn');
-                let isPlaying = false;
+                const musicBtn = document.getElementById('music-btn');
+                const uiContainer = document.getElementById('ui-container');
 
-                const toggleMusic = () => {
-                    if (isPlaying) {
-                        music.pause();
-                        btn.innerText = "♪ Play Music";
-                        isPlaying = false;
-                    } else {
-                        music.play().then(() => {
-                            btn.innerText = "♪ Pause Music";
-                            isPlaying = true;
-                        }).catch(e => console.log("Audio play blocked"));
-                    }
-                };
+                // MAIN START LOGIC
+                startBtn.addEventListener('click', () => {
+                    // 1. Play Music
+                    music.play().then(() => {
+                        console.log("Music Playing");
+                    }).catch(e => console.log("Auto-play prevented", e));
 
-                // Click button to toggle
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent triggering window click
-                    toggleMusic();
+                    // 2. Hide Overlay
+                    overlay.classList.add('hidden');
+                    
+                    // 3. Start Animation
+                    this.isStarted = true;
+                    this.clock.start(); // Reset clock to 0 for perfect sync
+
+                    // 4. Trigger UI Animations
+                    uiContainer.classList.add('active');
+                    musicBtn.classList.add('visible');
                 });
 
-                // Auto-play on first user interaction (Browser policy workaround)
-                const startAudioOnInteraction = () => {
-                    if (!isPlaying) {
-                        music.play().then(() => {
-                            btn.innerText = "♪ Pause Music";
-                            isPlaying = true;
-                        }).catch(() => {});
+                // Music Toggle Button Logic
+                musicBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (music.paused) {
+                        music.play();
+                        musicBtn.innerText = "♪ Music On";
+                    } else {
+                        music.pause();
+                        musicBtn.innerText = "♪ Music Off";
                     }
-                    window.removeEventListener('click', startAudioOnInteraction);
-                    window.removeEventListener('touchstart', startAudioOnInteraction);
-                };
-
-                window.addEventListener('click', startAudioOnInteraction);
-                window.addEventListener('touchstart', startAudioOnInteraction);
+                });
             }
 
             createScene() {
@@ -321,7 +383,6 @@
                 this.matDiamond = new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.1, clearcoat: 1.0, emissive: 0x222222 });
                 this.matLightGreen = new THREE.MeshPhysicalMaterial({ color: 0x88ccaa, metalness: 0.3, roughness: 0.1, clearcoat: 1.0, emissive: 0x113322, emissiveIntensity: 0.4 });
                 this.matDarkGreen = new THREE.MeshPhysicalMaterial({ color: 0x446655, metalness: 0.4, roughness: 0.2, clearcoat: 1.0, emissive: 0x112211, emissiveIntensity: 0.2 });
-                // Light Blue Black as requested
                 this.matBlack = new THREE.MeshPhysicalMaterial({ color: 0x5EB5F0, metalness: 0.7, roughness: 0.2, clearcoat: 1.0, reflectivity: 0.5 });
 
                 this.matOrnGold = new THREE.MeshPhysicalMaterial({ color: 0xffcc33, metalness: 1.0, roughness: 0.1, clearcoat: 1.0, emissive: 0xaa6600, emissiveIntensity: 0.5 });
@@ -616,7 +677,7 @@
             createDetailedSnow() {
                 const geo = this.createComplexSnowflakeGeo();
                 const mat = new THREE.MeshBasicMaterial({ 
-                    color: 0xD7FFFF, // Light Cyan
+                    color: 0xD7FFFF, 
                     transparent: true, 
                     opacity: 0.2, 
                     depthWrite: false,
@@ -701,7 +762,17 @@
             animate() {
                 requestAnimationFrame(() => this.animate());
                 
-                const time = this.clock.getElapsedTime() * 2.5;
+                // --- FIX: Only advance time if game has started ---
+                let time = 0;
+                if (this.isStarted) {
+                    time = this.clock.getElapsedTime() * 2.5; // Speed multiplier
+                } else {
+                    // While on start screen, keep rotating slowly but no reveal
+                    this.mainGroup.rotation.y += 0.002;
+                    this.updateSnowSystems(); 
+                    this.composer.render();
+                    return; // Skip reveal logic
+                }
                 
                 // Reveal Logic
                 const revealDuration = 9.0;
