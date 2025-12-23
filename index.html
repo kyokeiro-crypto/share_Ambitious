@@ -24,7 +24,7 @@
             user-select: none;
         }
 
-        /* --- START OVERLAY (Cover Screen) --- */
+        /* --- START OVERLAY --- */
         #start-overlay {
             position: fixed;
             top: 0;
@@ -59,8 +59,6 @@
             text-transform: uppercase;
             box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
 
         .start-btn:hover {
@@ -86,74 +84,115 @@
             height: 100%;
             pointer-events: none;
             z-index: 10;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding-top: 5vh; 
         }
 
-        /* --- MODULE 1: Company Name --- */
+        /* --- MODULE 1: Company Name (Fixed at Top, Static) --- */
         .company-container {
+            position: absolute;
+            top: 5vh; /* 顶部位置 */
+            left: 0;
+            width: 100%;
             display: flex;
             flex-direction: row; 
             align-items: baseline; 
             justify-content: center;
             gap: 15px; 
-            margin-bottom: 5px; 
             opacity: 0; 
-            /* Animation starts only when .active is added */
+            z-index: 20;
+            /* 仅做透明度淡入，无位移 */
+            transition: opacity 2s ease;
         }
         
-        /* Only animate when UI is active (after click) */
         #ui-container.active .company-container {
-            animation: fadeInSimple 3s ease forwards;
-            animation-delay: 1.5s; 
+            opacity: 1;
         }
 
         .company-jp {
             font-family: 'Noto Serif JP', serif;
             font-weight: 900;
-            font-size: clamp(18px, 3.0vw, 24px); 
+            font-size: clamp(16px, 2.5vw, 22px); 
             background: linear-gradient(to bottom, #ffd700, #bf953f, #fbf5b7, #aa771c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.3));
             letter-spacing: 2px;
-            white-space: nowrap;
         }
 
         .company-en {
             font-family: 'Cinzel', serif;
             font-weight: 900;
-            font-size: clamp(18px, 3.0vw, 24px); 
+            font-size: clamp(16px, 2.5vw, 22px); 
             background: linear-gradient(to bottom, #ffd700, #bf953f, #fbf5b7, #aa771c);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
             letter-spacing: 3px;
+        }
+
+        /* --- MODULE 2: Merry Christmas (Adjusted Timing: 1.3s Stay) --- */
+        h1#final-title {
+            font-family: 'Cinzel', serif;
+            font-size: clamp(40px, 8vw, 80px); 
+            text-align: center;
+            margin: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 100%;
+            
+            background: linear-gradient(to bottom, #ffffff, #fffacd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            pointer-events: none;
             white-space: nowrap;
         }
 
-        /* --- MODULE 2: Merry Christmas --- */
-        h1 {
-            font-family: 'Cinzel', serif;
-            font-size: clamp(16px, 2.5vw, 24px); 
-            text-align: center;
-            margin: 0;
-            background: linear-gradient(to bottom, #ffffff, #aaaaaa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-            letter-spacing: 4px;
-            opacity: 0;
-            transition: opacity 2.5s ease;
+        /* 触发动画 */
+        h1.explode {
+            /* 总时长调整为 4.5s */
+            animation: firework-sequence 4.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
-        /* Music Button (Bottom Right) */
+        @keyframes firework-sequence {
+            /* 0% - 10%: 爆发 (约 0.45秒) */
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.1);
+                filter: blur(20px) brightness(10);
+                letter-spacing: -10px;
+            }
+            10% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.0);
+                filter: blur(0px) brightness(2);
+                letter-spacing: 2px;
+                text-shadow: 0 0 40px rgba(255, 255, 255, 1);
+            }
+            
+            /* 10% - 40%: 停留 (约 1.35秒) - 保持清晰 */
+            40% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.05);
+                filter: blur(0px) brightness(1);
+                letter-spacing: 2px;
+                text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            }
+
+            /* 40% - 100%: 消散 (约 2.7秒) */
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.5); /* 扩散 */
+                filter: blur(20px) brightness(0); /* 变暗模糊 */
+                letter-spacing: 50px; /* 粒子化散开 */
+            }
+        }
+
+        /* Music Button */
         #music-btn {
             position: absolute;
-            bottom: 30px;
+            bottom: 30px; 
             right: 30px;
             z-index: 100;
             background: rgba(0, 0, 0, 0.4);
@@ -163,19 +202,14 @@
             font-size: 12px;
             padding: 8px 16px;
             cursor: pointer;
-            pointer-events: auto;
             border-radius: 20px;
             transition: all 0.3s ease;
             text-transform: uppercase;
             letter-spacing: 2px;
-            backdrop-filter: blur(4px);
-            opacity: 0; /* Hidden initially */
-            transition: opacity 1s;
+            opacity: 0;
         }
         
         #music-btn.visible { opacity: 1; }
-
-        .visible { opacity: 1 !important; }
 
         @keyframes fadeInSimple { to { opacity: 0.9; } }
 
@@ -186,11 +220,10 @@
             width: 100%;
             height: 100%;
             background: #000;
-            z-index: 9998; /* Below overlay */
+            z-index: 9998;
             display: flex;
             justify-content: center;
             align-items: center;
-            transition: opacity 1s ease;
         }
         .spinner {
             width: 40px; height: 40px;
@@ -215,30 +248,28 @@
 
     <div id="loader"><div class="spinner"></div></div>
 
-    <!-- START SCREEN OVERLAY -->
+    <!-- START SCREEN -->
     <div id="start-overlay">
-        <button id="start-btn" class="start-btn">Click to Open Gift</button>
-        <div class="start-hint">Turn on your sound</div>
+        <button id="start-btn" class="start-btn">Open Gift</button>
+        <div class="start-hint">Sound On</div>
     </div>
 
-    <!-- AUDIO ELEMENT -->
+    <!-- AUDIO -->
     <audio id="bg-music" loop>
-        <!-- Replace with your MP3 URL -->
         <source src="BGM.mp3" type="audio/mpeg">
     </audio>
 
     <div id="ui-container">
-        <!-- 1. Company Name -->
+        <!-- Company Name: TOP Screen -->
         <div class="company-container">
             <span class="company-jp">株式会社</span>
             <span class="company-en">Ambitious</span>
         </div>
 
-        <!-- 2. Merry Christmas -->
+        <!-- Merry Christmas: Center Screen Firework -->
         <h1 id="final-title">Merry Christmas</h1>
     </div>
 
-    <!-- Music Control Button -->
     <button id="music-btn">♪ Music On</button>
 
     <script type="module">
@@ -270,7 +301,8 @@
                 this.snowMeshes = []; 
                 this.clock = new THREE.Clock();
                 this.trailParticles = []; 
-                this.isStarted = false; // Animation Flag
+                this.isStarted = false; 
+                this.finaleTriggered = false; 
                 this.init();
             }
 
@@ -286,11 +318,10 @@
                 this.createSnow();        
                 this.createDetailedSnow(); 
                 
-                this.setupInteraction(); // Handle Start Click
+                this.setupInteraction();
 
                 window.addEventListener('resize', () => this.onWindowResize(), false);
                 
-                // Hide loading spinner, show Start Overlay
                 const loader = document.getElementById('loader');
                 loader.style.opacity = '0';
                 setTimeout(() => loader.remove(), 1000);
@@ -305,26 +336,18 @@
                 const musicBtn = document.getElementById('music-btn');
                 const uiContainer = document.getElementById('ui-container');
 
-                // MAIN START LOGIC
                 startBtn.addEventListener('click', () => {
-                    // 1. Play Music
-                    music.play().then(() => {
-                        console.log("Music Playing");
-                    }).catch(e => console.log("Auto-play prevented", e));
-
-                    // 2. Hide Overlay
+                    music.play().catch(e => console.log("Auto-play prevented", e));
                     overlay.classList.add('hidden');
                     
-                    // 3. Start Animation
                     this.isStarted = true;
-                    this.clock.start(); // Reset clock to 0 for perfect sync
+                    this.clock.start(); 
 
-                    // 4. Trigger UI Animations
+                    // Show UI elements immediately
                     uiContainer.classList.add('active');
                     musicBtn.classList.add('visible');
                 });
 
-                // Music Toggle Button Logic
                 musicBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (music.paused) {
@@ -384,11 +407,9 @@
                 this.matLightGreen = new THREE.MeshPhysicalMaterial({ color: 0x88ccaa, metalness: 0.3, roughness: 0.1, clearcoat: 1.0, emissive: 0x113322, emissiveIntensity: 0.4 });
                 this.matDarkGreen = new THREE.MeshPhysicalMaterial({ color: 0x446655, metalness: 0.4, roughness: 0.2, clearcoat: 1.0, emissive: 0x112211, emissiveIntensity: 0.2 });
                 this.matBlack = new THREE.MeshPhysicalMaterial({ color: 0x5EB5F0, metalness: 0.7, roughness: 0.2, clearcoat: 1.0, reflectivity: 0.5 });
-
                 this.matOrnGold = new THREE.MeshPhysicalMaterial({ color: 0xffcc33, metalness: 1.0, roughness: 0.1, clearcoat: 1.0, emissive: 0xaa6600, emissiveIntensity: 0.5 });
                 this.matOrnRed = new THREE.MeshPhysicalMaterial({ color: 0xff3344, metalness: 0.5, roughness: 0.1, clearcoat: 1.0, emissive: 0x660011, emissiveIntensity: 0.5 });
                 this.ornamentMaterials = [this.matOrnGold, this.matOrnRed];
-
                 this.matRibbon = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 1.0, roughness: 0.2, emissive: 0x443300 });
                 this.giftMaterials = [
                     new THREE.MeshStandardMaterial({ color: 0xaa2222, roughness: 0.1 }),
@@ -397,24 +418,12 @@
                     new THREE.MeshStandardMaterial({ color: 0x882288, roughness: 0.1 }),
                     new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.1 }), 
                 ];
-
                 this.matVeil = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
                 this.matPearl = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.1, emissive: 0x222222 });
-                
                 this.matGlassStar = new THREE.MeshPhysicalMaterial({
-                    color: 0xffffff, 
-                    emissive: 0xffffff,
-                    emissiveIntensity: 1.5,
-                    metalness: 0.1, 
-                    roughness: 0.0,
-                    transmission: 1.0, 
-                    thickness: 1.5, 
-                    ior: 1.5,
-                    clearcoat: 1.0,
-                    transparent: true,
-                    opacity: 1.0
+                    color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.5, metalness: 0.1, roughness: 0.0,
+                    transmission: 1.0, thickness: 1.5, ior: 1.5, clearcoat: 1.0, transparent: true, opacity: 1.0
                 });
-                
                 this.matStarCenter = new THREE.MeshBasicMaterial({ color: 0xffd700 });
             }
 
@@ -468,32 +477,24 @@
             createGifts() {
                 for(let i = 0; i < SETTINGS.giftCount; i++) {
                     const group = new THREE.Group();
-                    
                     const scaleFactor = 2.0; 
                     const w = (1.2 + Math.random() * 0.8) * scaleFactor; 
                     const h = (0.8 + Math.random() * 0.6) * scaleFactor;
                     const d = (1.2 + Math.random() * 0.8) * scaleFactor;
-                    
                     const mat = this.giftMaterials[Math.floor(Math.random() * this.giftMaterials.length)];
                     const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-                    
                     const bandWidth = 0.2 * scaleFactor;
                     const ribbon1 = new THREE.Mesh(new THREE.BoxGeometry(w + 0.05, h + 0.05, bandWidth), this.matRibbon);
                     const ribbon2 = new THREE.Mesh(new THREE.BoxGeometry(bandWidth, h + 0.05, d + 0.05), this.matRibbon);
-                    
                     const bowGeo = new THREE.CylinderGeometry(0.3*scaleFactor, 0.3*scaleFactor, 0.15*scaleFactor, 16);
                     const bow1 = new THREE.Mesh(bowGeo, this.matRibbon); bow1.rotation.x = Math.PI/2; bow1.rotation.z = Math.PI/4; bow1.position.y = h/2 + 0.15*scaleFactor;
                     const bow2 = new THREE.Mesh(bowGeo, this.matRibbon); bow2.rotation.x = Math.PI/2; bow2.rotation.z = -Math.PI/4; bow2.position.y = h/2 + 0.15*scaleFactor;
-
                     group.add(box, ribbon1, ribbon2, bow1, bow2);
-                    
                     const angle = Math.random() * Math.PI * 2;
                     const r = 22.0 + Math.random() * 6.0; 
                     const y = -SETTINGS.treeHeight/2 + h/2; 
-                    
                     const pos = new THREE.Vector3(Math.cos(angle)*r, y, Math.sin(angle)*r);
                     group.rotation.y = Math.random() * Math.PI;
-                    
                     this.initParticle(group, pos, 'GIFT', { baseScale: 1.0 });
                 }
             }
@@ -518,7 +519,6 @@
                 const starGeo = new THREE.ExtrudeGeometry(starShape, { depth: 0.4, bevelEnabled: false });
                 starGeo.center();
 
-                // 1. Diamonds
                 for (let i = 0; i < SETTINGS.diamondCount; i++) {
                     const t = Math.random(); 
                     const y = (t - 0.5) * SETTINGS.treeHeight;
@@ -538,8 +538,7 @@
                     mesh.scale.setScalar(sizeGradient * (0.8 + Math.random() * 0.6));
                     this.initParticle(mesh, pos, 'DIAMOND');
                 }
-
-                // 2. Ornaments
+                
                 for (let i = 0; i < SETTINGS.hangingGemCount; i++) {
                     const mat = this.ornamentMaterials[Math.floor(Math.random() * this.ornamentMaterials.length)];
                     const mesh = new THREE.Mesh(hangingGemGeo, mat);
@@ -552,8 +551,6 @@
                     mesh.scale.setScalar((0.8 + Math.random() * 0.4) * 0.75); 
                     this.initParticle(mesh, pos, 'ORNAMENT');
                 }
-
-                // 3. Pearls
                 for (let l = 0; l < SETTINGS.pearlLayers; l++) {
                     const tLayer = l / (SETTINGS.pearlLayers - 1); 
                     const normalizedH = 0.1 + tLayer * 0.85; 
@@ -575,8 +572,6 @@
                         }
                     }
                 }
-
-                // 4. Veil
                 for (let i = 0; i < SETTINGS.veilCount; i++) {
                     const t = Math.random(); 
                     const y = (t - 0.5) * SETTINGS.treeHeight;
@@ -591,22 +586,18 @@
                     mesh.userData.opacityBase = opacitySim; 
                     this.initParticle(mesh, pos, 'VEIL');
                 }
-
-                // 5. Top Star
+                
                 const topStarGroup = new THREE.Group();
                 const glassMesh = new THREE.Mesh(starGeo, this.matGlassStar);
                 topStarGroup.add(glassMesh);
-
                 const lineGeo = new THREE.CylinderGeometry(0.15, 0.15, 4.0, 8);
                 const line1 = new THREE.Mesh(lineGeo, this.matStarCenter);
                 const line2 = new THREE.Mesh(lineGeo, this.matStarCenter);
                 line1.rotation.z = Math.PI/2;
                 const starLight = new THREE.PointLight(0xffffff, 150, 10);
                 topStarGroup.add(line1, line2, starLight);
-
                 const topPos = new THREE.Vector3(0, SETTINGS.treeHeight / 2 + 4.0, 0); 
                 topStarGroup.scale.setScalar(0.7); 
-                
                 this.initParticle(topStarGroup, topPos, 'TOP_STAR');
             }
 
@@ -658,10 +649,8 @@
                 shape.lineTo(-0.15, 2.1); shape.lineTo(-0.5, 2.0);
                 shape.lineTo(-0.2, 1.2); shape.lineTo(-0.7, 1.1); shape.lineTo(-0.6, 1.0);
                 shape.lineTo(-0.1, 0.5); shape.lineTo(0,0);
-
                 const extrudeSettings = { depth: 0.2, bevelEnabled: false };
                 const branchGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
-                
                 const geometries = [];
                 for(let i=0; i<6; i++) {
                     const clone = branchGeo.clone();
@@ -676,14 +665,7 @@
 
             createDetailedSnow() {
                 const geo = this.createComplexSnowflakeGeo();
-                const mat = new THREE.MeshBasicMaterial({ 
-                    color: 0xD7FFFF, 
-                    transparent: true, 
-                    opacity: 0.2, 
-                    depthWrite: false,
-                    blending: THREE.AdditiveBlending 
-                });
-
+                const mat = new THREE.MeshBasicMaterial({ color: 0xD7FFFF, transparent: true, opacity: 0.2, depthWrite: false, blending: THREE.AdditiveBlending });
                 for(let i=0; i<SETTINGS.bigSnowCount; i++) {
                     const mesh = new THREE.Mesh(geo, mat);
                     mesh.position.set((Math.random()-0.5)*70, Math.random()*50-10, (Math.random()-0.5)*120);
@@ -720,7 +702,6 @@
                     }
                     this.snowSystem.geometry.attributes.position.needsUpdate = true;
                 }
-
                 this.snowMeshes.forEach(mesh => {
                     const v = mesh.userData.velocity;
                     const t = mesh.userData.tumbleSpeed;
@@ -762,16 +743,14 @@
             animate() {
                 requestAnimationFrame(() => this.animate());
                 
-                // --- FIX: Only advance time if game has started ---
                 let time = 0;
                 if (this.isStarted) {
-                    time = this.clock.getElapsedTime() * 2.5; // Speed multiplier
+                    time = this.clock.getElapsedTime() * 2.5; 
                 } else {
-                    // While on start screen, keep rotating slowly but no reveal
                     this.mainGroup.rotation.y += 0.002;
                     this.updateSnowSystems(); 
                     this.composer.render();
-                    return; // Skip reveal logic
+                    return; 
                 }
                 
                 // Reveal Logic
@@ -795,9 +774,11 @@
                     this.cursor1.visible = false;
                     this.cursor2.visible = false;
                     
-                    const finalTitle = document.getElementById('final-title');
-                    if(finalTitle.style.opacity !== '1') {
-                        finalTitle.classList.add('visible');
+                    // --- FIREWORK TEXT TRIGGER ---
+                    if (!this.finaleTriggered) {
+                        const finalTitle = document.getElementById('final-title');
+                        finalTitle.classList.add('explode');
+                        this.finaleTriggered = true;
                     }
                 }
 
