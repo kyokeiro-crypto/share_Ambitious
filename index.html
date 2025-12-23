@@ -12,7 +12,11 @@
 
     <style>
         :root {
-            --c-bg: #050505; 
+            /* 
+               [修改点 1] 背景颜色调亮了一点 
+               原值: #050505 -> 新值: #101015 (深午夜蓝/灰色)
+            */
+            --c-bg: #101015; 
         }
 
         body {
@@ -89,7 +93,7 @@
         /* --- MODULE 1: Company Name (Fixed at Top, Static) --- */
         .company-container {
             position: absolute;
-            top: 5vh; /* 顶部位置 */
+            top: 5vh; 
             left: 0;
             width: 100%;
             display: flex;
@@ -99,7 +103,6 @@
             gap: 15px; 
             opacity: 0; 
             z-index: 20;
-            /* 仅做透明度淡入，无位移 */
             transition: opacity 2s ease;
         }
         
@@ -129,7 +132,7 @@
             letter-spacing: 3px;
         }
 
-        /* --- MODULE 2: Merry Christmas (Adjusted Timing: 1.3s Stay) --- */
+        /* --- MODULE 2: Merry Christmas --- */
         h1#final-title {
             font-family: 'Cinzel', serif;
             font-size: clamp(40px, 8vw, 80px); 
@@ -149,14 +152,11 @@
             white-space: nowrap;
         }
 
-        /* 触发动画 */
         h1.explode {
-            /* 总时长调整为 4.5s */
             animation: firework-sequence 4.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
 
         @keyframes firework-sequence {
-            /* 0% - 10%: 爆发 (约 0.45秒) */
             0% {
                 opacity: 0;
                 transform: translate(-50%, -50%) scale(0.1);
@@ -170,8 +170,6 @@
                 letter-spacing: 2px;
                 text-shadow: 0 0 40px rgba(255, 255, 255, 1);
             }
-            
-            /* 10% - 40%: 停留 (约 1.35秒) - 保持清晰 */
             40% {
                 opacity: 1;
                 transform: translate(-50%, -50%) scale(1.05);
@@ -179,17 +177,14 @@
                 letter-spacing: 2px;
                 text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
             }
-
-            /* 40% - 100%: 消散 (约 2.7秒) */
             100% {
                 opacity: 0;
-                transform: translate(-50%, -50%) scale(1.5); /* 扩散 */
-                filter: blur(20px) brightness(0); /* 变暗模糊 */
-                letter-spacing: 50px; /* 粒子化散开 */
+                transform: translate(-50%, -50%) scale(1.5);
+                filter: blur(20px) brightness(0);
+                letter-spacing: 50px;
             }
         }
 
-        /* Music Button */
         #music-btn {
             position: absolute;
             bottom: 30px; 
@@ -248,25 +243,21 @@
 
     <div id="loader"><div class="spinner"></div></div>
 
-    <!-- START SCREEN -->
     <div id="start-overlay">
         <button id="start-btn" class="start-btn">Open Winter Magic</button>
         <div class="start-hint">Sound On</div>
     </div>
 
-    <!-- AUDIO -->
     <audio id="bg-music" loop>
         <source src="BGM.mp3" type="audio/mpeg">
     </audio>
 
     <div id="ui-container">
-        <!-- Company Name: TOP Screen -->
         <div class="company-container">
             <span class="company-jp">株式会社</span>
             <span class="company-en">Ambitious</span>
         </div>
 
-        <!-- Merry Christmas: Center Screen Firework -->
         <h1 id="final-title">Merry Christmas</h1>
     </div>
 
@@ -343,7 +334,6 @@
                     this.isStarted = true;
                     this.clock.start(); 
 
-                    // Show UI elements immediately
                     uiContainer.classList.add('active');
                     musicBtn.classList.add('visible');
                 });
@@ -372,7 +362,10 @@
                 this.camera.position.set(0, 4, 70); 
 
                 this.scene = new THREE.Scene();
-                this.scene.fog = new THREE.FogExp2(0x050505, 0.012); 
+                
+                // [修改点 2] 雾的颜色也要跟随变亮，从 0x050505 改为 0x101015
+                // 这样背景才不会出现断层
+                this.scene.fog = new THREE.FogExp2(0x101015, 0.012); 
 
                 const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
                 pmremGenerator.compileEquirectangularShader();
